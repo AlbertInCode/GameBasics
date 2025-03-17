@@ -9,8 +9,12 @@ import android.view.SurfaceView
 
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback  {
     private val paint = Paint()
-    private var touchX = 0f
-    private var touchY = 0f
+    private var ballX = 300f
+    private var ballY = 300f
+    private var velocityX = 10f
+    private var velocityY = 10f
+    private val ballRadius = 50f
+    private var isRunning = true
 
     init {
         holder.addCallback(this)
@@ -26,29 +30,39 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      * @param holder The SurfaceHolder whose surface is being created.
      */
     override fun surfaceCreated(holder: SurfaceHolder) {
-        drawCanvas()
+        startGameLoop()
+    }
+
+    private fun startGameLoop() {
+        Thread {
+            while (isRunning) {
+                updatePhysics()
+                drawCanvas()
+                Thread.sleep(16)
+            }
+        }.start()
+    }
+
+    private fun updatePhysics() {
+        this.ballX += this.velocityX
+        this.ballY += this.velocityY
+
+        if (this.ballX - this.ballRadius < 0 || this.ballX + this.ballRadius > width) {
+            this.velocityX = -this.velocityX
+        }
+        if (this.ballY - this.ballRadius < 0 || this.ballY + this.ballRadius > height) {
+            this.velocityY = -this.velocityY
+        }
     }
 
     private fun drawCanvas() {
         val canvas = holder.lockCanvas()
         canvas.drawColor(Color.BLACK)
-        paint.color = Color.WHITE
-        paint.textSize = 50f
-        canvas.drawText("Touch the screen!", 100f, 100f, paint)
 
         paint.color = Color.RED
-        canvas.drawRect(this.touchX - 50, this.touchY - 50, this.touchX + 50, this.touchY + 50, paint)
+        canvas.drawCircle(ballX, ballY, ballRadius, paint)
 
         holder.unlockCanvasAndPost(canvas)
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_MOVE) {
-            this.touchX = event.x
-            this.touchY = event.y
-            drawCanvas()
-        }
-        return true
     }
 
     /**
@@ -76,7 +90,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      * @param holder The SurfaceHolder whose surface is being destroyed.
      */
     override fun surfaceDestroyed(holder: SurfaceHolder) {
-        // Clean up resources
+        this.isRunning = false
     }
 
 }
