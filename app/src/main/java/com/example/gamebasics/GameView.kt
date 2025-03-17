@@ -1,20 +1,21 @@
 package com.example.gamebasics
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Paint
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.view.animation.AccelerateDecelerateInterpolator
 
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback  {
     private val paint = Paint()
     private var ballX = 300f
     private var ballY = 300f
-    private var velocityX = 10f
-    private var velocityY = 10f
     private val ballRadius = 50f
-    private var isRunning = true
+
+    private var animator: ValueAnimator? = null
 
     init {
         holder.addCallback(this)
@@ -30,28 +31,21 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      * @param holder The SurfaceHolder whose surface is being created.
      */
     override fun surfaceCreated(holder: SurfaceHolder) {
-        startGameLoop()
+        startAnimation()
     }
 
-    private fun startGameLoop() {
-        Thread {
-            while (isRunning) {
-                updatePhysics()
+    private fun startAnimation() {
+        animator = ValueAnimator.ofFloat(0f, width.toFloat()).apply {
+            duration = 2000
+            interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener { animation ->
+                ballX = animation.animatedValue as Float
+                ballY = height / 2f
                 drawCanvas()
-                Thread.sleep(16)
             }
-        }.start()
-    }
-
-    private fun updatePhysics() {
-        this.ballX += this.velocityX
-        this.ballY += this.velocityY
-
-        if (this.ballX - this.ballRadius < 0 || this.ballX + this.ballRadius > width) {
-            this.velocityX = -this.velocityX
-        }
-        if (this.ballY - this.ballRadius < 0 || this.ballY + this.ballRadius > height) {
-            this.velocityY = -this.velocityY
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            start()
         }
     }
 
@@ -90,7 +84,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      * @param holder The SurfaceHolder whose surface is being destroyed.
      */
     override fun surfaceDestroyed(holder: SurfaceHolder) {
-        this.isRunning = false
+        animator?.cancel()
     }
 
 }
