@@ -13,9 +13,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private val paint = Paint()
     private var ballX = 300f
     private var ballY = 300f
+    private var velocityX = 10f
+    private var velocityY = 10f
     private val ballRadius = 50f
-
-    private var animator: ValueAnimator? = null
+    private var isPaused = false
 
     init {
         holder.addCallback(this)
@@ -31,22 +32,27 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      * @param holder The SurfaceHolder whose surface is being created.
      */
     override fun surfaceCreated(holder: SurfaceHolder) {
-        startAnimation()
+        startGameLoop()
     }
 
-    private fun startAnimation() {
-        animator = ValueAnimator.ofFloat(0f, width.toFloat()).apply {
-            duration = 2000
-            interpolator = AccelerateDecelerateInterpolator()
-            addUpdateListener { animation ->
-                ballX = animation.animatedValue as Float
-                ballY = height / 2f
-                drawCanvas()
+    private fun startGameLoop() {
+        Thread {
+            while (true) {
+                if (!isPaused) {
+                    updatePhysics()
+                    drawCanvas()
+                }
+                Thread.sleep(16)
             }
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            start()
-        }
+        }.start()
+    }
+
+    private fun updatePhysics() {
+        ballX += velocityX
+        ballY += velocityY
+
+        if (ballX - ballRadius < 0 || ballX + ballRadius > width) velocityX = -velocityX
+        if (ballY - ballRadius < 0 || ballY + ballRadius > height) velocityY = -velocityY
     }
 
     private fun drawCanvas() {
@@ -57,6 +63,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         canvas.drawCircle(ballX, ballY, ballRadius, paint)
 
         holder.unlockCanvasAndPost(canvas)
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            isPaused = !isPaused
+        }
+
+        return true
     }
 
     /**
@@ -84,7 +98,6 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      * @param holder The SurfaceHolder whose surface is being destroyed.
      */
     override fun surfaceDestroyed(holder: SurfaceHolder) {
-        animator?.cancel()
     }
 
 }
