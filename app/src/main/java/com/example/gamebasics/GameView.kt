@@ -1,13 +1,11 @@
 package com.example.gamebasics
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Paint
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import android.view.animation.AccelerateDecelerateInterpolator
 
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback  {
     private val paint = Paint()
@@ -17,9 +15,20 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     private var velocityY = 10f
     private val ballRadius = 50f
     private var isPaused = false
+    private var score = 0
+    private var obstacles = mutableListOf<Obstacle>()
 
     init {
         holder.addCallback(this)
+        for (i in 0 until 4) {
+            obstacles.add(Obstacle(
+                (800..1200).random().toFloat(),
+                (100..800).random().toFloat(),
+                80f,
+                120f,
+                (5..10).random().toFloat()
+            ))
+        }
     }
 
     /**
@@ -53,14 +62,34 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
         if (ballX - ballRadius < 0 || ballX + ballRadius > width) velocityX = -velocityX
         if (ballY - ballRadius < 0 || ballY + ballRadius > height) velocityY = -velocityY
+
+        // Update obstacle
+        obstacles.forEach { it.update() }
+
+        obstacles.forEach {
+            if (it.checkCollision(ballX, ballY, ballRadius)) {
+                isPaused = true
+            }
+        }
+
+        score++
     }
 
     private fun drawCanvas() {
         val canvas = holder.lockCanvas()
         canvas.drawColor(Color.BLACK)
 
+        // Draw ball
         paint.color = Color.RED
         canvas.drawCircle(ballX, ballY, ballRadius, paint)
+
+        // Draw obstacle
+        obstacles.forEach { it.draw(canvas) }
+
+        // Draw score
+        paint.color = Color.WHITE
+        paint.textSize = 50f
+        canvas.drawText("Score: $score", 50f, 50f, paint)
 
         holder.unlockCanvasAndPost(canvas)
     }
