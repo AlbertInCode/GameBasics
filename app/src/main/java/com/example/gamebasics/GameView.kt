@@ -9,26 +9,13 @@ import android.view.SurfaceView
 
 class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback  {
     private val paint = Paint()
-    private var ballX = 300f
-    private var ballY = 300f
-    private var velocityX = 10f
-    private var velocityY = 10f
-    private val ballRadius = 50f
-    private var isPaused = false
+    private val animations = Animations()
+    private val soundManager = GameSoundManager(context)
     private var score = 0
-    private var obstacles = mutableListOf<Obstacle>()
+    private var isPaused = false
 
     init {
         holder.addCallback(this)
-        for (i in 0 until 4) {
-            obstacles.add(Obstacle(
-                (800..1200).random().toFloat(),
-                (100..800).random().toFloat(),
-                80f,
-                120f,
-                (5..10).random().toFloat()
-            ))
-        }
     }
 
     /**
@@ -42,13 +29,14 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      */
     override fun surfaceCreated(holder: SurfaceHolder) {
         startGameLoop()
+        animations.animatePlayerPaint(paint)
     }
 
     private fun startGameLoop() {
         Thread {
             while (true) {
                 if (!isPaused) {
-                    updatePhysics()
+                    updateGameLogic()
                     drawCanvas()
                 }
                 Thread.sleep(16)
@@ -56,50 +44,25 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         }.start()
     }
 
-    private fun updatePhysics() {
-        ballX += velocityX
-        ballY += velocityY
-
-        if (ballX - ballRadius < 0 || ballX + ballRadius > width) velocityX = -velocityX
-        if (ballY - ballRadius < 0 || ballY + ballRadius > height) velocityY = -velocityY
-
-        // Update obstacle
-        obstacles.forEach { it.update() }
-
-        obstacles.forEach {
-            if (it.checkCollision(ballX, ballY, ballRadius)) {
-                isPaused = true
-            }
-        }
-
+    private fun updateGameLogic() {
         score++
+
+        if (score % 10 == 0) soundManager.playScoreSound()
+
+        if (score == 500) {
+            soundManager.playCollisionSound()
+            isPaused = true
+        }
     }
 
     private fun drawCanvas() {
         val canvas = holder.lockCanvas()
         canvas.drawColor(Color.BLACK)
 
-        // Draw ball
-        paint.color = Color.RED
-        canvas.drawCircle(ballX, ballY, ballRadius, paint)
-
-        // Draw obstacle
-        obstacles.forEach { it.draw(canvas) }
-
-        // Draw score
-        paint.color = Color.WHITE
-        paint.textSize = 50f
-        canvas.drawText("Score: $score", 50f, 50f, paint)
+        //paint.color = Color.RED
+        canvas.drawCircle(width / 2f, height / 2f, 50f, paint)
 
         holder.unlockCanvasAndPost(canvas)
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN) {
-            isPaused = !isPaused
-        }
-
-        return true
     }
 
     /**
@@ -127,6 +90,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
      * @param holder The SurfaceHolder whose surface is being destroyed.
      */
     override fun surfaceDestroyed(holder: SurfaceHolder) {
+        soundManager.release()
     }
 
 }
